@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <link rel="manifest" href="manifest.json">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#002B5B"> 
+    <title>Mi Iglesia - VínculoApp</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        /* ADN VISUAL VÍNCULOAPP */
+        :root {
+            --brand-primary: #002B5B; /* Tu azul corporativo */
+            --brand-accent: #1D4ED8;  /* Azul brillante para botones */
+            --brand-success: #10b981; /* Verde de éxito */
+        }
+
+        body { 
+            background-color: #f8fafc; 
+            font-family: system-ui, -apple-system, sans-serif; 
+        }
+        
+        .mobile-container {
+            max-width: 480px; 
+            margin: 0 auto;
+            background: #ffffff;
+            min-height: 100vh;
+            box-shadow: 0 0 50px rgba(0, 43, 91, 0.1); /* Sombra color corporativo */
+            position: relative;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Estilo del Logo */
+        .logo-container {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+            border-radius: 22px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 25px rgba(0, 43, 91, 0.08);
+            border: 1px solid rgba(0, 43, 91, 0.05);
+            margin-bottom: 20px;
+        }
+
+        .form-control-custom {
+            border-radius: 14px;
+            padding: 14px 18px;
+            border: 1px solid #e2e8f0;
+            background-color: #f8fafc;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control-custom:focus {
+            background-color: #ffffff;
+            box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.15);
+            border-color: var(--brand-accent);
+        }
+
+        .btn-brand {
+            background: var(--brand-primary);
+            color: white;
+            border-radius: 14px;
+            padding: 14px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            border: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 8px 20px rgba(0, 43, 91, 0.2);
+        }
+        
+        .btn-brand:active { transform: scale(0.97); }
+        .btn-brand:hover { background: #001f42; color: white; }
+
+        .btn-accent {
+            background: var(--brand-accent);
+            box-shadow: 0 8px 20px rgba(29, 78, 216, 0.25);
+        }
+        .btn-accent:hover { background: #1e40af; }
+        
+        /* Loader de VínculoApp */
+        .vinculo-loader { display: none; }
+        .vinculo-loader.active { display: inline-block; }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-container animate__animated animate__fadeIn">
+        
+        <div class="text-center pt-5 pb-2 px-4">
+            <div class="logo-container">
+                <img src="logo.png" alt="VínculoApp" width="55" style="object-fit: contain;">
+            </div>
+            <h3 class="fw-bold text-dark mb-1" style="color: var(--brand-primary) !important;">Bienvenido</h3>
+            <p class="text-muted small">Tu iglesia en la palma de tu mano</p>
+        </div>
+
+        <div class="flex-grow-1 px-4 pt-3">
+            
+            <div id="vista-login">
+                <div id="login-error" class="alert alert-danger d-none small py-2 rounded-3 border-0 bg-danger bg-opacity-10 text-danger fw-medium"></div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted ms-1 mb-1">Correo Electrónico</label>
+                    <input type="email" id="login-email" class="form-control form-control-custom" placeholder="tu@correo.com">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted ms-1 mb-1">Contraseña</label>
+                    <input type="password" id="login-pass" class="form-control form-control-custom" placeholder="••••••••">
+                </div>
+                
+                <button id="btn-login" class="btn btn-brand w-100 mb-4" onclick="ejecutarLogin()">
+                    <span class="btn-text">Iniciar Sesión</span>
+                    <i class="fa-solid fa-circle-notch fa-spin vinculo-loader ms-2"></i>
+                </button>
+                
+                <div class="text-center mt-2 border-top pt-4">
+                    <span class="text-muted small">¿Aún no tienes tu cuenta?</span><br>
+                    <button class="btn btn-link text-primary fw-bold text-decoration-none p-0 mt-1" onclick="alternarVistas()" style="color: var(--brand-accent) !important;">Crear mi perfil ahora</button>
+                </div>
+            </div>
+
+            <div id="vista-registro" class="d-none animate__animated animate__fadeInRight">
+                
+                <div class="alert border-0 rounded-4 p-3 mb-4 d-flex align-items-start" style="background-color: #f0fdf4; color: #166534;">
+                    <i class="fa-solid fa-shield-check mt-1 me-2 text-success"></i>
+                    <small style="line-height: 1.3;">Usa el correo o RUT que diste en la iglesia para <b>vincular tu perfil automáticamente</b>.</small>
+                </div>
+
+                <div id="reg-error" class="alert alert-danger d-none small py-2 rounded-3 border-0 bg-danger bg-opacity-10 text-danger fw-medium"></div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted ms-1 mb-1">Nombre Completo</label>
+                    <input type="text" id="reg-nombre" class="form-control form-control-custom" placeholder="Ej: Juan Pérez">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted ms-1 mb-1">RUT / Documento <span class="fw-normal opacity-75">(Opcional)</span></label>
+                    <input type="text" id="reg-rut" class="form-control form-control-custom" placeholder="12345678-9">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted ms-1 mb-1">Correo Electrónico</label>
+                    <input type="email" id="reg-email" class="form-control form-control-custom" placeholder="tu@correo.com">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted ms-1 mb-1">Crea una Contraseña</label>
+                    <input type="password" id="reg-pass" class="form-control form-control-custom" placeholder="Mínimo 6 caracteres">
+                </div>
+                
+                <button id="btn-reg" class="btn btn-brand btn-accent w-100 mb-3" onclick="ejecutarRegistro()">
+                    <span class="btn-text">Crear Cuenta</span>
+                    <i class="fa-solid fa-circle-notch fa-spin vinculo-loader ms-2"></i>
+                </button>
+                
+                <div class="text-center mt-3 mb-4">
+                    <button class="btn btn-link text-muted fw-bold text-decoration-none small" onclick="alternarVistas()">
+                        <i class="fa-solid fa-arrow-left me-1"></i> Volver a Iniciar Sesión
+                    </button>
+                </div>
+            </div>
+
+        </div>
+        
+        <div class="text-center py-4 mt-auto">
+             <small class="text-muted opacity-75" style="font-size: 0.7rem;">Desarrollado por <b>VínculoApp</b></small>
+        </div>
+    </div>
+
+    <script>
+        // ⚠️ IMPORTANTE: PEGA AQUÍ TUS CREDENCIALES DE SUPABASE
+        const SUPABASE_URL = 'https://molqmoxdnddsrljuoljv.supabase.co'; 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1vbHFtb3hkbmRkc3JsanVvbGp2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDQ5NzIzMSwiZXhwIjoyMDkwMDczMjMxfQ.1Is7Jz6dM7BXSXSeZppXf0_uq4bbKiNsCwlKzuL5YNw';
+        const clienteSupa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Cambiar entre Login y Registro
+        function alternarVistas() {
+            const vLogin = document.getElementById('vista-login');
+            const vRegistro = document.getElementById('vista-registro');
+            document.getElementById('login-error').classList.add('d-none');
+            document.getElementById('reg-error').classList.add('d-none');
+            
+            if (vLogin.classList.contains('d-none')) {
+                vRegistro.classList.add('d-none');
+                vLogin.classList.remove('d-none');
+                vLogin.classList.add('animate__fadeInLeft');
+            } else {
+                vLogin.classList.add('d-none');
+                vRegistro.classList.remove('d-none');
+            }
+        }
+
+        // ==========================================
+        // 1. INICIAR SESIÓN
+        // ==========================================
+        async function ejecutarLogin() {
+            const email = document.getElementById('login-email').value.trim();
+            const pass = document.getElementById('login-pass').value;
+            const errorBox = document.getElementById('login-error');
+            const btn = document.getElementById('btn-login');
+
+            if (!email || !pass) {
+                mostrarError(errorBox, "Por favor completa todos los campos.");
+                return;
+            }
+
+            estadoCarga(btn, true);
+
+            const { data, error } = await clienteSupa.auth.signInWithPassword({ email, password: pass });
+
+            estadoCarga(btn, false);
+
+            if (error) {
+                mostrarError(errorBox, "Correo o contraseña incorrectos.");
+            } else {
+                // ¡Éxito! Redirigir al panel principal de la App
+                window.location.href = "app_inicio.html"; // Crearemos este archivo pronto
+            }
+        }
+
+        // ==========================================
+        // 2. REGISTRO Y SISTEMA ANTI-CLONES
+        // ==========================================
+        async function ejecutarRegistro() {
+            const nombre = document.getElementById('reg-nombre').value.trim();
+            const rut = document.getElementById('reg-rut').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            const pass = document.getElementById('reg-pass').value;
+            const errorBox = document.getElementById('reg-error');
+            const btn = document.getElementById('btn-reg');
+
+            if (!nombre || !email || !pass) {
+                mostrarError(errorBox, "Nombre, Correo y Contraseña son obligatorios.");
+                return;
+            }
+            if (pass.length < 6) {
+                mostrarError(errorBox, "La contraseña debe tener al menos 6 caracteres.");
+                return;
+            }
+
+            estadoCarga(btn, true);
+
+            // PASO A: Crear la cuenta segura en el sistema (auth.users)
+            const { data: authData, error: authError } = await clienteSupa.auth.signUp({
+                email: email,
+                password: pass
+            });
+
+            if (authError) {
+                estadoCarga(btn, false);
+                mostrarError(errorBox, authError.message.includes('already registered') ? "Este correo ya está registrado." : "Hubo un error al crear tu cuenta.");
+                return;
+            }
+
+            const userID = authData.user.id;
+
+            // PASO B: EL MOTOR ANTI-CLONES (Buscar en la tabla 'personas')
+            // Busca si alguien tiene este email O este RUT
+            let query = clienteSupa.from('personas').select('id, nombre').or(`correo.eq.${email}${rut ? `,rut.eq.${rut}` : ''}`);
+            const { data: posiblesClones } = await query;
+
+            if (posiblesClones && posiblesClones.length > 0) {
+                // ¡BINGO! Ya existía en la base de datos de la iglesia.
+                // Lo vinculamos pegándole el 'auth_id' a su ficha existente.
+                const personaExistente = posiblesClones[0]; // Tomamos el primer match
+                await clienteSupa.from('personas').update({ auth_id: userID }).eq('id', personaExistente.id);
+                console.log("¡Perfil Vinculado Exitosamente!");
+            } else {
+                // ES NUEVO: Lo creamos en la base de datos pública.
+                await clienteSupa.from('personas').insert([{
+                    nombre: nombre,
+                    correo: email,
+                    rut: rut || null,
+                    auth_id: userID,
+                    estado: 'Activo' // Opcional, según cómo manejes tus estados
+                }]);
+                console.log("¡Nuevo Perfil Creado!");
+            }
+
+            estadoCarga(btn, false);
+            // ¡Registro completado! Redirigir a la app.
+            window.location.href = "app_inicio.html"; 
+        }
+
+        // ==========================================
+        // FUNCIONES DE APOYO (Visuales)
+        // ==========================================
+        function mostrarError(elemento, mensaje) {
+            elemento.innerText = mensaje;
+            elemento.classList.remove('d-none');
+            elemento.classList.add('animate__animated', 'animate__headShake');
+            setTimeout(() => elemento.classList.remove('animate__headShake'), 1000);
+        }
+
+        function estadoCarga(btn, cargando) {
+            const icon = btn.querySelector('.vinculo-loader');
+            const text = btn.querySelector('.btn-text');
+            if (cargando) {
+                icon.classList.add('active');
+                text.style.opacity = '0.5';
+                btn.disabled = true;
+            } else {
+                icon.classList.remove('active');
+                text.style.opacity = '1';
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
