@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <link rel="manifest" href="manifest.json">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#f8fafc">
+    <title>Agenda - VínculoApp</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        :root {
+            --brand-primary: #002B5B; 
+            --brand-accent: #1D4ED8;
+            --brand-danger: #ef4444; 
+        }
+        body { background-color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+        .mobile-container {
+            max-width: 480px; margin: 0 auto; background: #f8fafc; min-height: 100vh;
+            box-shadow: 0 0 50px rgba(0,0,0,0.05); position: relative;
+        }
+        
+        .top-nav {
+            background: #ffffff; padding: 15px 20px;
+            display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        }
+        .btn-back {
+            background: #f1f5f9; color: #334155; border: none;
+            width: 40px; height: 40px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            text-decoration: none; transition: all 0.2s;
+        }
+        .btn-back:active { transform: scale(0.9); background: #e2e8f0; }
+
+        .event-card {
+            background: #ffffff; border-radius: 20px; border: none;
+            box-shadow: 0 8px 20px rgba(0, 43, 91, 0.05);
+            margin-bottom: 15px; overflow: hidden; display: flex;
+        }
+        .event-date-box {
+            background: var(--brand-primary); color: white;
+            min-width: 80px; padding: 15px 10px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .event-details { padding: 15px; flex-grow: 1; overflow: hidden; }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-container">
+        
+        <div class="top-nav">
+            <a href="app_inicio.html" class="btn-back">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <h5 class="m-0 fw-bold text-dark" style="font-size: 1.1rem;">Agenda Híbrida</h5>
+            <div style="width: 40px;"></div> 
+        </div>
+
+        <div class="p-4" id="contenedor-eventos">
+            <div class="text-center py-5 text-muted small">
+                <i class="fa-solid fa-spinner fa-spin fa-2x mb-3 d-block text-primary"></i>
+                Cargando tu agenda...
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://molqmoxdnddsrljuoljv.supabase.co'; 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1vbHFtb3hkbmRkc3JsanVvbGp2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDQ5NzIzMSwiZXhwIjoyMDkwMDczMjMxfQ.1Is7Jz6dM7BXSXSeZppXf0_uq4bbKiNsCwlKzuL5YNw';
+        const clienteSupa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        const API_KEY_GOOGLE = "AIzaSyBTCRPej-HWOrM9YS0UzKsLyorL7o4TcSU";
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await clienteSupa.auth.getSession();
+            if (!session) {
+                window.location.href = 'miembros.html';
+                return;
+            }
+            cargarAgendaHibrida();
+        });
+
+        async function cargarAgendaHibrida() {
+            const cont = document.getElementById('contenedor-eventos');
+            
+            try {
+                const { data: eventosTicketera } = await clienteSupa
+                    .from('eventos')
+                    .select('*')
+                    .eq('estado', 'Activo');
+
+                const { data: sedesData } = await clienteSupa
+                    .from('sedes')
+                    .select('nombre, google_calendar_id')
+                    .not('google_calendar_id', 'is', null);
+                
+                let calendariosGoogle = sedesData ? sedesData.filter(s => s.google_calendar_id && s.google_calendar_id.trim() !== '') : [];
+
+                const hoy = new Date();
+                hoy.setHours(0,0,0,0);
+                const timeMin = hoy.toISOString();
+                
+                let listaFinal = [];
+
+                await Promise.all(calendariosGoogle.map(async (sede) => {
+                    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(sede.google_calendar_id.trim())}/events?key=${API_KEY_GOOGLE}&timeMin=${timeMin}&maxResults=10&singleEvents=true&orderBy=startTime`;
+                    try {
+                        const response = await fetch(url);
+                        const data = await response.json();
+                        if (data.items) {
+                            data.items.forEach(ev => {
+                                listaFinal.push({
+                                    tipo: 'informativo',
+                                    titulo: ev.summary,
+                                    fecha: ev.start.dateTime || ev.start.date,
+                                    hora: ev.start.dateTime ? new Date(ev.start.dateTime).toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'}) : 'Todo el día',
+                                    ubicacion: ev.location || sede.nombre
+                                });
+                            });
+                        }
+                    } catch (err) {
+                        console.warn("Falló conexión con calendario de Google.");
+                    }
+                }));
+
+                if (eventosTicketera) {
+                    eventosTicketera.forEach(ev => {
+                        const fechaSegura = ev.fecha_hora || new Date().toISOString();
+                        const fechaObj = new Date(fechaSegura);
+                        const horaSegura = fechaObj.toLocaleTimeString('es-CL', {hour: '2-digit', minute:'2-digit'}) + ' hrs';
+                        
+                        // ENLACE EXPLÍCITO Y SEGURO
+                        const baseUrl = 'https://vinculoapp.cl';
+                        let urlFinal = '';
+                        if (ev.slug && ev.slug.trim() !== '') {
+                            urlFinal = `${baseUrl}/e/${ev.slug}`;
+                        } else {
+                            urlFinal = `${baseUrl}/ticket.html?id=${ev.id}`;
+                        }
+
+                        listaFinal.push({
+                            tipo: 'ticket',
+                            titulo: ev.nombre || 'Sin título',
+                            fecha: fechaSegura,
+                            hora: horaSegura,
+                            ubicacion: ev.ubicacion || '',
+                            precio: ev.tipo === 'Pago' ? '$' + Number(ev.precio || 0).toLocaleString('es-CL') : 'GRATIS',
+                            link: urlFinal
+                        });
+                    });
+                }
+
+                listaFinal.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+                if (listaFinal.length === 0) {
+                    cont.innerHTML = `<div class="text-center py-5 text-muted small"><i class="fa-solid fa-mug-hot fa-2x mb-3 text-secondary opacity-50"></i><br>No hay eventos próximos en la agenda.</div>`;
+                    return;
+                }
+
+                cont.innerHTML = listaFinal.map((ev, index) => {
+                    const fechaObj = new Date(ev.fecha);
+                    const dia = fechaObj.getDate();
+                    const mes = fechaObj.toLocaleDateString('es-CL', { month: 'short' }).toUpperCase().replace('.', '');
+                    
+                    if (ev.tipo === 'ticket') {
+                        // SOLUCIÓN: Usamos <button> con window.open para obligar al navegador a no cortar la URL
+                        return `
+                        <div class="event-card border-start border-danger border-4 animate__animated animate__fadeInUp" style="animation-delay: ${index * 0.1}s">
+                            <div class="event-date-box" style="background: var(--brand-danger) !important;">
+                                <span class="fw-bold" style="font-size: 0.7rem;">${mes}</span>
+                                <span class="fw-extrabold" style="font-size: 1.7rem;">${dia}</span>
+                            </div>
+                            <div class="event-details">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <h6 class="fw-bold text-dark m-0 pe-2 text-truncate">${ev.titulo}</h6>
+                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 small" style="font-size: 0.55rem; white-space: normal; line-height: 1;">INSCRIPCIÓN</span>
+                                </div>
+                                <div class="text-muted small mb-2"><i class="fa-regular fa-clock me-1"></i> ${ev.hora} <span class="mx-1">|</span> <b class="text-danger">${ev.precio}</b></div>
+                                ${ev.ubicacion ? `<div class="text-muted mb-3" style="font-size: 0.75rem;"><i class="fa-solid fa-location-dot me-1"></i> ${ev.ubicacion}</div>` : ''}
+                                
+                                <button onclick="window.open('${ev.link}', '_blank')" class="btn btn-sm btn-danger w-100 rounded-pill fw-bold shadow-sm border-0">
+                                    <i class="fa-solid fa-ticket me-1"></i> Inscribirme
+                                </button>
+                            </div>
+                        </div>`;
+                    } else {
+                        // DISEÑO INFORMATIVO (GRIS/SOBRIO)
+                        return `
+                        <div class="event-card animate__animated animate__fadeInUp" style="animation-delay: ${index * 0.1}s; background: #fdfdfd;">
+                            <div class="event-date-box" style="background: #64748b !important;">
+                                <span class="fw-bold" style="font-size: 0.7rem;">${mes}</span>
+                                <span class="fw-extrabold" style="font-size: 1.7rem;">${dia}</span>
+                            </div>
+                            <div class="event-details">
+                                <h6 class="fw-bold text-dark mb-1 text-truncate">${ev.titulo}</h6>
+                                <div class="text-muted small mb-2"><i class="fa-regular fa-clock me-1"></i> ${ev.hora}</div>
+                                ${ev.ubicacion ? `<div class="text-muted" style="font-size: 0.75rem;"><i class="fa-solid fa-location-dot text-danger opacity-75 me-1"></i> ${ev.ubicacion}</div>` : ''}
+                            </div>
+                        </div>`;
+                    }
+                }).join('');
+
+            } catch (error) {
+                console.error(error);
+                cont.innerHTML = `<div class="alert alert-danger small m-2">Error al cargar la agenda. Por favor, intenta de nuevo.</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "Mi Vínculo",
+  "short_name": "Vínculo",
+  "description": "Aplicación oficial para miembros de VínculoApp",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#002B5B",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

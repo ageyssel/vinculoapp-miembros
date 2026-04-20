@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <link rel="manifest" href="manifest.json">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#f8fafc">
+    <title>Consejería - VínculoApp</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        :root { --brand-primary: #002B5B; --brand-info: #0ea5e9; }
+        body { background-color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+        .mobile-container {
+            max-width: 480px; margin: 0 auto; background: #f8fafc; min-height: 100vh;
+            box-shadow: 0 0 50px rgba(0,0,0,0.05); position: relative;
+        }
+        
+        .top-nav {
+            background: #ffffff; padding: 15px 20px;
+            display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        }
+        .btn-back {
+            background: #f1f5f9; color: #334155; border: none;
+            width: 40px; height: 40px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            text-decoration: none; transition: all 0.2s;
+        }
+
+        .card-pro { background: #ffffff; border-radius: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.04); border: none; overflow: hidden; }
+        .form-control, .form-select { border-radius: 12px; border: 2px solid #e2e8f0; padding: 12px 15px; transition: 0.2s; }
+        .form-control:focus, .form-select:focus { border-color: var(--brand-info); box-shadow: none; }
+        
+        .history-item { border-bottom: 1px solid #f1f5f9; }
+        .history-item:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-container pb-5">
+        <div class="top-nav">
+            <a href="app_inicio.html" class="btn-back"><i class="fa-solid fa-arrow-left"></i></a>
+            <h5 class="m-0 fw-bold text-dark" style="font-size: 1.1rem;">Cuidado Pastoral</h5>
+            <div style="width: 40px;"></div> 
+        </div>
+
+        <div class="p-4 text-center animate__animated animate__fadeIn">
+            <div class="bg-info bg-opacity-10 d-inline-flex p-3 rounded-circle mb-3">
+                <i class="fa-solid fa-hand-holding-hand fa-2x text-info"></i>
+            </div>
+            <h4 class="fw-bold text-dark mb-2">No estás solo</h4>
+            <p class="text-muted small mx-auto" style="max-width: 300px;">
+                Nuestro equipo pastoral está aquí para escucharte, orar contigo y acompañarte. Todo lo que compartas será tratado con absoluta confidencialidad.
+            </p>
+        </div>
+
+        <div class="px-4">
+            <div class="card-pro p-4 mb-4 shadow-sm border-0 animate__animated animate__fadeInUp">
+                <h6 class="fw-bold text-dark mb-3"><i class="fa-solid fa-pen text-info me-2"></i>Nueva Solicitud</h6>
+                
+                <form id="form-consejeria">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">¿En qué área necesitas apoyo?</label>
+                        <select class="form-select fw-bold text-dark" id="req-tipo" required>
+                            <option value="" disabled selected>Selecciona un área...</option>
+                            <option value="Espiritual">Crecimiento Espiritual</option>
+                            <option value="Matrimonial/Pareja">Matrimonial o Pareja</option>
+                            <option value="Familiar">Dinámica Familiar</option>
+                            <option value="Emocional/Crisis">Apoyo Emocional / Crisis</option>
+                            <option value="Otro">Otra situación</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label text-muted small fw-bold">Cuéntanos un poco más (Opcional)</label>
+                        <textarea class="form-control" id="req-motivo" rows="3" placeholder="Esto nos ayudará a asignar al pastor o consejero adecuado..."></textarea>
+                    </div>
+
+                    <button type="submit" id="btn-enviar" class="btn btn-info text-white w-100 rounded-pill py-3 fw-bold shadow-sm" style="font-size: 1.1rem;">
+                        <i class="fa-solid fa-paper-plane me-2"></i> Enviar Solicitud
+                    </button>
+                </form>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-3 px-1">
+                <h6 class="fw-bold text-dark m-0">Mis solicitudes</h6>
+            </div>
+            
+            <div id="historial-consejerias" class="card-pro shadow-sm">
+                <div class="text-center py-4 text-muted small">
+                    <i class="fa-solid fa-spinner fa-spin mb-2"></i> Cargando...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://molqmoxdnddsrljuoljv.supabase.co'; 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1vbHFtb3hkbmRkc3JsanVvbGp2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDQ5NzIzMSwiZXhwIjoyMDkwMDczMjMxfQ.1Is7Jz6dM7BXSXSeZppXf0_uq4bbKiNsCwlKzuL5YNw';
+        const clienteSupa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        let sesionUsuario = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await clienteSupa.auth.getSession();
+            if (!session) { window.location.href = 'miembros.html'; return; }
+            sesionUsuario = session.user;
+            
+            cargarHistorial();
+        });
+
+        // Enviar el formulario a Supabase
+        document.getElementById('form-consejeria').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const tipo = document.getElementById('req-tipo').value;
+            const motivo = document.getElementById('req-motivo').value.trim();
+            const btn = document.getElementById('btn-enviar');
+
+            btn.disabled = true;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Enviando...';
+
+            try {
+                const { error } = await clienteSupa.from('consejerias').insert([{
+                    auth_id: sesionUsuario.id,
+                    tipo_consejeria: tipo,
+                    motivo: motivo,
+                    estado: 'Pendiente'
+                }]);
+
+                if (error) throw error;
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Solicitud Recibida',
+                    text: 'Hemos recibido tu petición. Un consejero se pondrá en contacto contigo pronto.',
+                    confirmButtonColor: '#0ea5e9'
+                }).then(() => {
+                    document.getElementById('form-consejeria').reset();
+                    cargarHistorial();
+                });
+
+            } catch (err) {
+                console.error(err);
+                Swal.fire('Error', 'Hubo un problema al enviar tu solicitud. Intenta más tarde.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        });
+
+        // Cargar el historial del usuario
+        async function cargarHistorial() {
+            const cont = document.getElementById('historial-consejerias');
+            try {
+                const { data, error } = await clienteSupa
+                    .from('consejerias')
+                    .select('*')
+                    .eq('auth_id', sesionUsuario.id)
+                    .order('fecha_solicitud', { ascending: false });
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    cont.innerHTML = `<div class="text-center py-4 text-muted small"><i class="fa-regular fa-folder-open mb-2 d-block fs-4 opacity-50"></i>No tienes solicitudes activas.</div>`;
+                    return;
+                }
+
+                cont.innerHTML = data.map(item => {
+                    const fecha = new Date(item.fecha_solicitud).toLocaleDateString('es-CL', { day:'2-digit', month:'short', year:'numeric' });
+                    
+                    // Colores según el estado
+                    let colorStatus = 'text-warning'; // Pendiente
+                    let bgStatus = 'bg-warning';
+                    let iconStatus = 'fa-clock';
+                    
+                    if(item.estado === 'En Proceso') { colorStatus = 'text-info'; bgStatus = 'bg-info'; iconStatus = 'fa-spinner'; }
+                    if(item.estado === 'Finalizada' || item.estado === 'Atendida') { colorStatus = 'text-success'; bgStatus = 'bg-success'; iconStatus = 'fa-check-double'; }
+                    
+                    return `
+                    <div class="history-item p-3 d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <div class="${bgStatus} bg-opacity-10 p-2 rounded-circle me-3 ${colorStatus}">
+                                <i class="fa-solid ${iconStatus}"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 fw-bold small text-dark">${item.tipo_consejeria}</h6>
+                                <small class="text-muted">${fecha}</small>
+                            </div>
+                        </div>
+                        <span class="badge ${bgStatus} bg-opacity-25 border border-light-subtle text-dark" style="font-size: 0.75rem;">${item.estado}</span>
+                    </div>`;
+                }).join('');
+
+            } catch (err) {
+                cont.innerHTML = `<div class="text-center py-4 text-danger small">No se pudo cargar el historial.</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

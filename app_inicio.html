@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <link rel="manifest" href="manifest.json">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#002B5B">
+    <title>Mi Perfil - VínculoApp</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        body { 
+            background-color: #f1f5f9; 
+            font-family: system-ui, -apple-system, sans-serif; 
+        }
+        
+        /* Contenedor Principal Responsivo */
+        .app-container {
+            max-width: 1000px; /* Se expande en PC */
+            margin: 0 auto; 
+            background: #ffffff; 
+            min-height: 100vh;
+            box-shadow: 0 10px 40px rgba(0, 43, 91, 0.08); 
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .header-app {
+            background: #002B5B; color: white; padding: 30px 20px;
+            border-bottom-left-radius: 25px; border-bottom-right-radius: 25px;
+            transition: all 0.3s ease;
+        }
+
+        /* Grid Dinámico para los botones */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* Por defecto (Celulares): 1 columna */
+            gap: 15px;
+        }
+
+        .card-menu {
+            border-radius: 16px; border: 1px solid #e2e8f0; transition: all 0.2s;
+            text-decoration: none; color: #1e293b; display: flex; align-items: center; 
+            background: #ffffff; height: 100%;
+        }
+        
+        .card-menu:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05) !important;
+            border-color: #cbd5e1;
+        }
+
+        .card-menu:active { transform: scale(0.98); background-color: #f8fafc; }
+        
+        /* Estilos del Tablón de Anuncios */
+        .tablon-avisos {
+            background: linear-gradient(135deg, rgba(26, 127, 141, 0.05) 0%, rgba(62, 159, 110, 0.05) 100%);
+            border: 1px solid rgba(26, 127, 141, 0.2);
+            border-left: 4px solid #1A7F8D;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        /* =========================================
+           BREAKPOINTS RESPONSIVOS (LA MAGIA)
+           ========================================= */
+        
+        /* Para Tablets (más de 576px de ancho) */
+        @media (min-width: 576px) {
+            .menu-grid {
+                grid-template-columns: repeat(2, 1fr); /* 2 Columnas */
+            }
+            .header-app {
+                padding: 40px 30px;
+            }
+        }
+
+        /* Para Computadores PC (más de 992px de ancho) */
+        @media (min-width: 992px) {
+            .app-container {
+                margin-top: 30px;
+                margin-bottom: 30px;
+                min-height: calc(100vh - 60px);
+                border-radius: 20px; /* Efecto flotante en PC */
+                overflow: hidden;
+            }
+            .header-app {
+                border-radius: 0; /* Quitamos la curva inferior porque el contenedor ya tiene borde */
+                padding: 50px 40px;
+            }
+            .main-content-p {
+                padding: 40px !important; /* Más espacio interior */
+            }
+            .menu-grid {
+                grid-template-columns: repeat(4, 1fr); /* 4 Columnas para aprovechar el monitor */
+                gap: 20px;
+            }
+            .card-menu {
+                flex-direction: column; /* Icono arriba, texto abajo en PC */
+                text-align: center;
+                padding: 30px 15px !important;
+            }
+            .card-menu .rounded-circle {
+                margin-right: 0 !important;
+                margin-bottom: 15px;
+                width: 60px; height: 60px;
+                display: flex; justify-content: center; align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <div class="header-app shadow-sm">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <img src="logo.png" alt="Logo" width="45" style="filter: brightness(0) invert(1);" onerror="this.style.display='none'">
+                <button class="btn btn-sm btn-outline-light rounded-pill border-0 px-3" onclick="cerrarSesion()">
+                    <i class="fa-solid fa-arrow-right-from-bracket me-1"></i> Salir
+                </button>
+            </div>
+            <h5 class="fw-normal mb-1 opacity-75">Hola,</h5>
+            <h2 class="fw-bold mb-0 display-6" id="nombre-usuario">Cargando...</h2>
+        </div>
+
+        <div class="p-4 main-content-p">
+            
+            <h6 class="text-muted fw-bold mb-3 text-uppercase" style="font-size: 0.85rem; letter-spacing: 1px;">
+                MI IGLESIA <i class="fa-solid fa-building ms-1"></i> <span id="ui-nombre-sede" class="text-success fw-bolder ms-1"></span>
+            </h6>
+
+            <div class="tablon-avisos shadow-sm">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="fa-solid fa-bullhorn text-primary me-2"></i>
+                    <h6 class="fw-bold text-dark m-0" style="font-size: 1rem;">Avisos Generales</h6>
+                </div>
+                <p id="texto-tablon" class="text-muted small mb-0 fw-medium" style="line-height: 1.6;">
+                    <i class="fa-solid fa-spinner fa-spin me-1"></i> Sincronizando anuncios...
+                </p>
+            </div>
+            
+            <div class="menu-grid mt-4">
+                
+                <a href="app_eventos.html" class="card-menu p-3 shadow-sm">
+                    <div class="bg-primary bg-opacity-10 p-3 rounded-circle me-3 text-primary">
+                        <i class="fa-solid fa-calendar-day fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-1">Eventos y Agenda</h6>
+                        <small class="text-muted">Inscripciones y próximos servicios</small>
+                    </div>
+                </a>
+
+                <a href="app_grupos.html" class="card-menu p-3 shadow-sm">
+                    <div class="bg-success bg-opacity-10 p-3 rounded-circle me-3 text-success">
+                        <i class="fa-solid fa-people-group fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-1">Mi Grupo Pequeño</h6>
+                        <small class="text-muted">Conecta con tu comunidad</small>
+                    </div>
+                </a>
+                
+                <a href="app_consejerias.html" class="card-menu p-3 shadow-sm">
+                    <div class="bg-info bg-opacity-10 p-3 rounded-circle me-3 text-info">
+                        <i class="fa-solid fa-hand-holding-hand fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-1">Cuidado Pastoral</h6>
+                        <small class="text-muted">Solicita consejería o apoyo espiritual</small>
+                    </div>
+                </a>
+
+                <a href="app_ofrendas.html" class="card-menu p-3 shadow-sm">
+                    <div class="bg-warning bg-opacity-10 p-3 rounded-circle me-3 text-warning">
+                        <i class="fa-solid fa-hand-holding-heart fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-1">Generosidad</h6>
+                        <small class="text-muted">Diezmos y ofrendas online</small>
+                    </div>
+                </a>
+
+            </div> </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://molqmoxdnddsrljuoljv.supabase.co'; 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1vbHFtb3hkbmRkc3JsanVvbGp2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDQ5NzIzMSwiZXhwIjoyMDkwMDczMjMxfQ.1Is7Jz6dM7BXSXSeZppXf0_uq4bbKiNsCwlKzuL5YNw';
+        const clienteSupa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session }, error } = await clienteSupa.auth.getSession();
+            
+            if (!session) {
+                window.location.href = 'miembros.html';
+                return;
+            }
+
+            const userId = session.user.id;
+            
+            const { data: persona } = await clienteSupa
+                .from('personas')
+                .select('*, sedes(nombre)') 
+                .eq('auth_id', userId)
+                .maybeSingle();
+
+            if (persona && persona.nombres) {
+                document.getElementById('nombre-usuario').innerText = persona.nombres;
+            } else if (persona && persona.nombre) {
+                document.getElementById('nombre-usuario').innerText = persona.nombre;
+            } else {
+                document.getElementById('nombre-usuario').innerText = session.user.email.split('@')[0];
+            }
+            
+            if (persona && persona.sedes && persona.sedes.nombre) {
+                document.getElementById('ui-nombre-sede').innerText = "- " + persona.sedes.nombre;
+            } else {
+                document.getElementById('ui-nombre-sede').innerText = "";
+            }
+
+            if (persona && persona.organizacion_id) {
+                cargarTablonAvisos(persona.organizacion_id);
+            } else {
+                document.getElementById('texto-tablon').innerHTML = 'Tu perfil no está vinculado a una organización para ver los avisos.';
+            }
+        });
+
+        async function cargarTablonAvisos(orgId) {
+            try {
+                const { data, error } = await clienteSupa
+                    .from('organizaciones')
+                    .select('anuncio_global')
+                    .eq('id', orgId)
+                    .single();
+
+                if (error) throw error;
+
+                if (data && data.anuncio_global) {
+                    document.getElementById('texto-tablon').innerHTML = data.anuncio_global.replace(/\n/g, '<br>');
+                } else {
+                    document.getElementById('texto-tablon').innerHTML = 'No hay anuncios oficiales en este momento.';
+                }
+            } catch (err) {
+                console.error("Error cargando avisos:", err);
+                document.getElementById('texto-tablon').innerHTML = 'No pudimos sincronizar los avisos recientes.';
+            }
+        }
+
+        async function cerrarSesion() {
+            await clienteSupa.auth.signOut();
+            window.location.href = 'miembros.html';
+        }
+    </script>
+</body>
+</html>

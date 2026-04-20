@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <link rel="manifest" href="manifest.json">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#f8fafc">
+    <title>Mi Grupo - VínculoApp</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        :root {
+            --brand-success: #10b981; 
+        }
+        body { background-color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+        .mobile-container {
+            max-width: 480px; margin: 0 auto; background: #f8fafc; min-height: 100vh;
+            box-shadow: 0 0 50px rgba(0,0,0,0.05); position: relative;
+        }
+        
+        .top-nav {
+            background: #ffffff; padding: 15px 20px;
+            display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        }
+        .btn-back {
+            background: #f1f5f9; color: #334155; border: none;
+            width: 40px; height: 40px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            text-decoration: none; transition: all 0.2s;
+        }
+        
+        .group-card {
+            background: #ffffff; border-radius: 20px; border: none;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05); overflow: hidden;
+            border-top: 5px solid var(--brand-success);
+        }
+        
+        .leader-avatar {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: #e2e8f0; color: #64748b;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; margin: 0 auto 15px;
+            border: 4px solid #f8fafc; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        
+        .btn-whatsapp {
+            background: #25D366; color: white; border: none; font-weight: 600;
+        }
+        .btn-whatsapp:hover { background: #128C7E; color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-container">
+        <div class="top-nav">
+            <a href="app_inicio.html" class="btn-back"><i class="fa-solid fa-arrow-left"></i></a>
+            <h5 class="m-0 fw-bold text-dark" style="font-size: 1.1rem;">Mi Grupo</h5>
+            <div style="width: 40px;"></div> 
+        </div>
+
+        <div class="p-4" id="contenedor-grupo">
+            <div class="text-center py-5 text-muted small">
+                <i class="fa-solid fa-spinner fa-spin fa-2x mb-3 d-block text-success"></i>
+                Buscando tu información...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://molqmoxdnddsrljuoljv.supabase.co'; 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1vbHFtb3hkbmRkc3JsanVvbGp2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDQ5NzIzMSwiZXhwIjoyMDkwMDczMjMxfQ.1Is7Jz6dM7BXSXSeZppXf0_uq4bbKiNsCwlKzuL5YNw';
+        const clienteSupa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await clienteSupa.auth.getSession();
+            if (!session) {
+                window.location.href = 'miembros.html';
+                return;
+            }
+            cargarMiGrupo(session.user.id);
+        });
+
+        async function cargarMiGrupo(authId) {
+            const cont = document.getElementById('contenedor-grupo');
+            console.log("🚀 Iniciando búsqueda para ID:", authId);
+            
+            try {
+                // Consultamos la tabla personas
+                const { data: persona, error: errPersona } = await clienteSupa
+                    .from('personas')
+                    .select('*')
+                    .eq('auth_id', authId)
+                    .maybeSingle();
+
+                if (errPersona) {
+                    console.error("❌ Error de Supabase:", errPersona);
+                    throw new Error("Error en la base de datos: " + errPersona.message);
+                }
+
+                console.log("👤 Resultado de la búsqueda:", persona);
+
+                if (!persona) {
+                    console.error("⚠️ No se encontró ninguna fila. ¿Pegaste el ID " + authId + " en la columna auth_id de la tabla personas?");
+                    cont.innerHTML = `
+                        <div class="alert alert-danger text-center animate__animated animate__shakeX">
+                            <i class="fa-solid fa-user-slash fa-2x mb-3"></i>
+                            <h6 class="fw-bold">Perfil no vinculado</h6>
+                            <p class="small mb-0">No encontramos una persona con tu ID en la base de datos.<br>
+                            <code class="bg-dark text-white p-1 rounded">${authId}</code></p>
+                        </div>`;
+                    return;
+                }
+
+                // Si encontró a la persona, seguimos con la lógica normal
+                const nombreUsuario = persona.nombres || persona.nombre || "Miembro";
+                
+                if (!persona.grupo_id) {
+                    cont.innerHTML = `
+                        <div class="text-center animate__animated animate__fadeIn">
+                            <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 100px; height: 100px;">
+                                <i class="fa-solid fa-users fa-3x text-success"></i>
+                            </div>
+                            <h4 class="fw-bold mb-2">Hola ${nombreUsuario}, aún no tienes grupo</h4>
+                            <p class="text-muted small mb-4">Los grupos pequeños son el corazón de nuestra iglesia. Es el lugar perfecto para crecer.</p>
+                            <a href="https://wa.me/569XXXXXXXX?text=Hola,%20soy%20${encodeURIComponent(nombreUsuario)}%20y%20quiero%20unirme%20a%20un%20grupo." target="_blank" class="btn btn-success w-100 rounded-pill fw-bold py-2 shadow-sm">
+                                Solicitar unirme a un grupo
+                            </a>
+                        </div>`;
+                } else {
+                    // Aquí va la lógica para cargar los datos del grupo
+                    obtenerDatosDelGrupo(persona.grupo_id, nombreUsuario);
+                }
+
+            } catch (error) {
+                console.error("🔥 Error crítico:", error);
+                cont.innerHTML = `<div class="alert alert-warning small">${error.message}</div>`;
+            }
+        }
+
+        // Función auxiliar para separar la lógica
+        async function obtenerDatosDelGrupo(grupoId, nombrePersona) {
+            const cont = document.getElementById('contenedor-grupo');
+            const { data: grupo, error: errG } = await clienteSupa.from('grupos').select('*').eq('id', grupoId).single();
+            
+            if (grupo) {
+                const telLimpio = grupo.telefono_lider ? grupo.telefono_lider.replace(/\D/g, '') : '';
+                cont.innerHTML = `
+                    <div class="group-card p-4 animate__animated animate__fadeInUp">
+                        <div class="leader-avatar"><i class="fa-solid fa-user-tie"></i></div>
+                        <div class="text-center mb-4">
+                            <span class="badge bg-light text-success border border-success border-opacity-25 mb-2">${grupo.nombre}</span>
+                            <h4 class="fw-bold text-dark m-0">${grupo.nombre_lider}</h4>
+                            <p class="text-muted small">Líder de Grupo</p>
+                        </div>
+                        <div class="bg-light rounded-4 p-3 mb-3 border border-light-subtle">
+                            <div class="d-flex align-items-start mb-3">
+                                <i class="fa-regular fa-clock text-success mt-1 me-3 fs-5 opacity-75"></i>
+                                <div><h6 class="fw-bold mb-0 text-dark" style="font-size: 0.9rem;">Horario</h6><span class="text-muted small">${grupo.dia_hora || 'Por definir'}</span></div>
+                            </div>
+                            <div class="d-flex align-items-start">
+                                <i class="fa-solid fa-location-dot text-success mt-1 me-3 fs-5 opacity-75"></i>
+                                <div><h6 class="fw-bold mb-0 text-dark" style="font-size: 0.9rem;">Ubicación</h6><span class="text-muted small">${grupo.ubicacion || 'Por confirmar'}</span></div>
+                            </div>
+                        </div>
+                        <a href="https://wa.me/${telLimpio}?text=Hola%20${encodeURIComponent(grupo.nombre_lider)},%20soy%20${encodeURIComponent(nombrePersona)}%20de%20tu%20grupo!" target="_blank" class="btn btn-whatsapp w-100 rounded-pill py-2 shadow-sm mt-3">
+                            <i class="fa-brands fa-whatsapp fs-5 me-2"></i> Contactar a mi líder
+                        </a>
+                    </div>`;
+            } else {
+                cont.innerHTML = `<div class="alert alert-warning small">Tienes un grupo asignado, pero sus datos no están disponibles.</div>`;
+            }
+        }
+    </script>
+</body>
+</html>
