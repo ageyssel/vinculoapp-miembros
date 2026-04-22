@@ -14,11 +14,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        /* ADN VISUAL VÍNCULOAPP */
         :root {
-            --brand-primary: #002B5B; /* Tu azul corporativo */
-            --brand-accent: #1D4ED8;  /* Azul brillante para botones */
-            --brand-success: #10b981; /* Verde de éxito */
+            --brand-primary: #002B5B; 
+            --brand-accent: #1D4ED8;  
+            --brand-success: #10b981; 
         }
 
         body { 
@@ -31,14 +30,13 @@
             margin: 0 auto;
             background: #ffffff;
             min-height: 100vh;
-            box-shadow: 0 0 50px rgba(0, 43, 91, 0.1); /* Sombra color corporativo */
+            box-shadow: 0 0 50px rgba(0, 43, 91, 0.1);
             position: relative;
             overflow-x: hidden;
             display: flex;
             flex-direction: column;
         }
 
-        /* Estilo del Logo */
         .logo-container {
             width: 80px;
             height: 80px;
@@ -52,7 +50,7 @@
             margin-bottom: 20px;
         }
 
-        .form-control-custom {
+        .form-control-custom, .form-select-custom {
             border-radius: 14px;
             padding: 14px 18px;
             border: 1px solid #e2e8f0;
@@ -61,7 +59,7 @@
             transition: all 0.3s ease;
         }
         
-        .form-control-custom:focus {
+        .form-control-custom:focus, .form-select-custom:focus {
             background-color: #ffffff;
             box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.15);
             border-color: var(--brand-accent);
@@ -88,7 +86,6 @@
         }
         .btn-accent:hover { background: #1e40af; }
         
-        /* Loader de VínculoApp */
         .vinculo-loader { display: none; }
         .vinculo-loader.active { display: inline-block; }
     </style>
@@ -99,7 +96,7 @@
         
         <div class="text-center pt-5 pb-2 px-4">
             <div class="logo-container">
-                <img src="logo.png" alt="VínculoApp" width="55" style="object-fit: contain;">
+                <img src="logo.png" alt="VínculoApp" width="55" style="object-fit: contain;" onerror="this.style.display='none'">
             </div>
             <h3 class="fw-bold text-dark mb-1" style="color: var(--brand-primary) !important;">Bienvenido</h3>
             <p class="text-muted small">Tu iglesia en la palma de tu mano</p>
@@ -125,7 +122,7 @@
                 </button>
                 
                 <div class="text-center mt-2 border-top pt-4">
-                    <span class="text-muted small">¿Aún no tienes tu cuenta?</span><br>
+                    <span class="text-muted small">¿Aún no tienes tu cuenta o eres nuevo?</span><br>
                     <button class="btn btn-link text-primary fw-bold text-decoration-none p-0 mt-1" onclick="alternarVistas()" style="color: var(--brand-accent) !important;">Crear mi perfil ahora</button>
                 </div>
             </div>
@@ -134,34 +131,44 @@
                 
                 <div class="alert border-0 rounded-4 p-3 mb-4 d-flex align-items-start" style="background-color: #f0fdf4; color: #166534;">
                     <i class="fa-solid fa-shield-check mt-1 me-2 text-success"></i>
-                    <small style="line-height: 1.3;">Usa el correo o RUT que diste en la iglesia para <b>vincular tu perfil automáticamente</b>.</small>
+                    <small style="line-height: 1.3;">Busca tu nombre para <b>vincular tu perfil automáticamente</b> a los registros de tu iglesia.</small>
                 </div>
 
                 <div id="reg-error" class="alert alert-danger d-none small py-2 rounded-3 border-0 bg-danger bg-opacity-10 text-danger fw-medium"></div>
 
                 <div class="mb-3">
-                    <label class="form-label small fw-bold text-muted ms-1 mb-1">Nombre Completo</label>
-                    <input type="text" id="reg-nombre" class="form-control form-control-custom" placeholder="Ej: Juan Pérez">
+                    <label class="form-label small fw-bold text-muted ms-1 mb-1">1. Selecciona tu Iglesia / Sede (*)</label>
+                    <select id="reg-sede" class="form-select form-select-custom" onchange="limpiarBuscador()">
+                        <option value="" disabled selected>Cargando sedes...</option>
+                    </select>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-muted ms-1 mb-1">RUT / Documento <span class="fw-normal opacity-75">(Opcional)</span></label>
-                    <input type="text" id="reg-rut" class="form-control form-control-custom" placeholder="12345678-9">
+
+                <div class="mb-3 position-relative">
+                    <label class="form-label small fw-bold text-muted ms-1 mb-1">2. Tu Nombre Completo (*)</label>
+                    <input type="text" id="reg-nombre" class="form-control form-control-custom border-primary" placeholder="Ej: Juan Pérez" autocomplete="off" onkeyup="buscarNombrePredictivo(this.value)">
+                    <input type="hidden" id="reg-persona-id" value="">
+                    <input type="hidden" id="reg-organizacion-id" value="">
+                    
+                    <div id="reg-resultados-nombre" class="list-group position-absolute w-100 shadow-lg mt-1" style="display: none; max-height: 200px; overflow-y: auto; z-index: 1000;"></div>
+                    
+                    <div id="reg-hint-vinculo" class="form-text small text-success fw-bold d-none mt-1"><i class="fa-solid fa-link"></i> ¡Perfil vinculado listo para activar!</div>
                 </div>
+
                 <div class="mb-3">
-                    <label class="form-label small fw-bold text-muted ms-1 mb-1">Correo Electrónico</label>
+                    <label class="form-label small fw-bold text-muted ms-1 mb-1">3. Tu Correo Electrónico (*)</label>
                     <input type="email" id="reg-email" class="form-control form-control-custom" placeholder="tu@correo.com">
                 </div>
                 <div class="mb-4">
-                    <label class="form-label small fw-bold text-muted ms-1 mb-1">Crea una Contraseña</label>
+                    <label class="form-label small fw-bold text-muted ms-1 mb-1">4. Crea una Contraseña (*)</label>
                     <input type="password" id="reg-pass" class="form-control form-control-custom" placeholder="Mínimo 6 caracteres">
                 </div>
                 
                 <button id="btn-reg" class="btn btn-brand btn-accent w-100 mb-3" onclick="ejecutarRegistro()">
-                    <span class="btn-text">Crear Cuenta</span>
+                    <span class="btn-text">Activar mi Cuenta</span>
                     <i class="fa-solid fa-circle-notch fa-spin vinculo-loader ms-2"></i>
                 </button>
                 
-                <div class="text-center mt-3 mb-4">
+                <div class="text-center mt-3 mb-4 border-top pt-3">
                     <button class="btn btn-link text-muted fw-bold text-decoration-none small" onclick="alternarVistas()">
                         <i class="fa-solid fa-arrow-left me-1"></i> Volver a Iniciar Sesión
                     </button>
@@ -176,12 +183,100 @@
     </div>
 
     <script>
-        // ⚠️ IMPORTANTE: PEGA AQUÍ TUS CREDENCIALES DE SUPABASE
         const SUPABASE_URL = 'https://molqmoxdnddsrljuoljv.supabase.co'; 
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1vbHFtb3hkbmRkc3JsanVvbGp2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDQ5NzIzMSwiZXhwIjoyMDkwMDczMjMxfQ.1Is7Jz6dM7BXSXSeZppXf0_uq4bbKiNsCwlKzuL5YNw';
         const clienteSupa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Cambiar entre Login y Registro
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarSedes();
+        });
+
+        // ==========================================
+        // CARGAR SEDES PARA EL REGISTRO
+        // ==========================================
+        async function cargarSedes() {
+            try {
+                const { data, error } = await clienteSupa.from('sedes').select('nombre, organizacion_id');
+                const select = document.getElementById('reg-sede');
+                
+                if (data && data.length > 0) {
+                    select.innerHTML = '<option value="" disabled selected>Selecciona tu iglesia...</option>' + 
+                        data.map(s => `<option value="${s.nombre}" data-org="${s.organizacion_id}">${s.nombre}</option>`).join('');
+                } else {
+                    select.innerHTML = '<option value="" disabled selected>No se encontraron iglesias</option>';
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // ==========================================
+        // BUSCADOR PREDICTIVO Y VINCULACIÓN
+        // ==========================================
+        async function buscarNombrePredictivo(val) {
+            const resultsDiv = document.getElementById('reg-resultados-nombre');
+            const sedeSelect = document.getElementById('reg-sede');
+            const sedeNombre = sedeSelect.value;
+            
+            if (!val || val.length < 3) {
+                resultsDiv.style.display = 'none';
+                resetearVinculo();
+                return;
+            }
+
+            if (!sedeNombre) {
+                resultsDiv.innerHTML = '<div class="list-group-item text-danger small"><i class="fa-solid fa-triangle-exclamation me-1"></i> Por favor, selecciona tu iglesia primero.</div>';
+                resultsDiv.style.display = 'block';
+                return;
+            }
+
+            const { data, error } = await clienteSupa
+                .from('personas')
+                .select('id, nombre, correo, organizacion_id')
+                .eq('sede_nombre', sedeNombre)
+                .is('auth_id', null)
+                .ilike('nombre', `%${val}%`)
+                .limit(5);
+
+            if (data && data.length > 0) {
+                resultsDiv.innerHTML = data.map(p => `
+                    <button type="button" class="list-group-item list-group-item-action py-2 small border-primary border-opacity-25" 
+                        onclick="seleccionarPersonaParaRegistro('${p.id}', '${p.nombre.replace(/'/g, "\\'")}', '${p.correo || ''}', '${p.organizacion_id}')">
+                        <i class="fa-solid fa-user-check text-success me-2"></i> <strong>${p.nombre}</strong>
+                    </button>
+                `).join('');
+            } else {
+                resultsDiv.innerHTML = '<div class="list-group-item text-muted small"><i class="fa-solid fa-plus-circle me-1"></i> Eres nuevo. Se creará tu registro oficial.</div>';
+            }
+            resultsDiv.style.display = 'block';
+        }
+
+        function seleccionarPersonaParaRegistro(id, nombre, correo, orgId) {
+            document.getElementById('reg-nombre').value = nombre;
+            document.getElementById('reg-persona-id').value = id;
+            document.getElementById('reg-organizacion-id').value = orgId;
+            
+            if(correo && correo !== 'null') document.getElementById('reg-email').value = correo;
+            
+            document.getElementById('reg-resultados-nombre').style.display = 'none';
+            
+            document.getElementById('reg-hint-vinculo').classList.remove('d-none');
+            document.getElementById('reg-nombre').classList.replace('border-primary', 'border-success');
+            document.getElementById('reg-sede').disabled = true; 
+        }
+
+        function resetearVinculo() {
+            document.getElementById('reg-persona-id').value = '';
+            document.getElementById('reg-organizacion-id').value = '';
+            document.getElementById('reg-hint-vinculo').classList.add('d-none');
+            document.getElementById('reg-nombre').classList.replace('border-success', 'border-primary');
+            document.getElementById('reg-sede').disabled = false;
+        }
+
+        function limpiarBuscador() {
+            document.getElementById('reg-nombre').value = '';
+            resetearVinculo();
+            document.getElementById('reg-resultados-nombre').style.display = 'none';
+        }
+
         function alternarVistas() {
             const vLogin = document.getElementById('vista-login');
             const vRegistro = document.getElementById('vista-registro');
@@ -199,7 +294,7 @@
         }
 
         // ==========================================
-        // 1. INICIAR SESIÓN
+        // INICIAR SESIÓN
         // ==========================================
         async function ejecutarLogin() {
             const email = document.getElementById('login-email').value.trim();
@@ -213,42 +308,40 @@
             }
 
             estadoCarga(btn, true);
-
             const { data, error } = await clienteSupa.auth.signInWithPassword({ email, password: pass });
-
             estadoCarga(btn, false);
 
             if (error) {
                 mostrarError(errorBox, "Correo o contraseña incorrectos.");
             } else {
-                // ¡Éxito! Redirigir al panel principal de la App
-                window.location.href = "app_inicio.html"; // Crearemos este archivo pronto
+                window.location.href = "app_inicio.html"; 
             }
         }
 
         // ==========================================
-        // 2. REGISTRO Y SISTEMA ANTI-CLONES
+        // EJECUTAR REGISTRO
         // ==========================================
         async function ejecutarRegistro() {
+            const sedeSelect = document.getElementById('reg-sede');
+            const sedeNombre = sedeSelect.value;
+            const orgIdFromSelect = sedeSelect.options[sedeSelect.selectedIndex]?.getAttribute('data-org');
+            
             const nombre = document.getElementById('reg-nombre').value.trim();
-            const rut = document.getElementById('reg-rut').value.trim();
-            const email = document.getElementById('reg-email').value.trim();
+            const email = document.getElementById('reg-email').value.trim().toLowerCase();
             const pass = document.getElementById('reg-pass').value;
+            
+            const personaVinculadaId = document.getElementById('reg-persona-id').value;
+            const orgIdVinculada = document.getElementById('reg-organizacion-id').value;
+
             const errorBox = document.getElementById('reg-error');
             const btn = document.getElementById('btn-reg');
 
-            if (!nombre || !email || !pass) {
-                mostrarError(errorBox, "Nombre, Correo y Contraseña son obligatorios.");
-                return;
-            }
-            if (pass.length < 6) {
-                mostrarError(errorBox, "La contraseña debe tener al menos 6 caracteres.");
-                return;
-            }
+            if (!sedeNombre) return mostrarError(errorBox, "Debes seleccionar tu iglesia.");
+            if (!nombre || !email || !pass) return mostrarError(errorBox, "Nombre, Correo y Contraseña son obligatorios.");
+            if (pass.length < 6) return mostrarError(errorBox, "La contraseña debe tener al menos 6 caracteres.");
 
             estadoCarga(btn, true);
 
-            // PASO A: Crear la cuenta segura en el sistema (auth.users)
             const { data: authData, error: authError } = await clienteSupa.auth.signUp({
                 email: email,
                 password: pass
@@ -256,42 +349,42 @@
 
             if (authError) {
                 estadoCarga(btn, false);
-                mostrarError(errorBox, authError.message.includes('already registered') ? "Este correo ya está registrado." : "Hubo un error al crear tu cuenta.");
+                mostrarError(errorBox, authError.message.includes('already registered') ? "Este correo ya está registrado. Inicia sesión." : "Hubo un error al crear tu cuenta.");
                 return;
             }
 
             const userID = authData.user.id;
 
-            // PASO B: EL MOTOR ANTI-CLONES (Buscar en la tabla 'personas')
-            // Busca si alguien tiene este email O este RUT
-            let query = clienteSupa.from('personas').select('id, nombre').or(`correo.eq.${email}${rut ? `,rut.eq.${rut}` : ''}`);
-            const { data: posiblesClones } = await query;
-
-            if (posiblesClones && posiblesClones.length > 0) {
-                // ¡BINGO! Ya existía en la base de datos de la iglesia.
-                // Lo vinculamos pegándole el 'auth_id' a su ficha existente.
-                const personaExistente = posiblesClones[0]; // Tomamos el primer match
-                await clienteSupa.from('personas').update({ auth_id: userID }).eq('id', personaExistente.id);
-                console.log("¡Perfil Vinculado Exitosamente!");
-            } else {
-                // ES NUEVO: Lo creamos en la base de datos pública.
-                await clienteSupa.from('personas').insert([{
-                    nombre: nombre,
-                    correo: email,
-                    rut: rut || null,
+            if (personaVinculadaId) {
+                await clienteSupa.from('personas').update({ 
                     auth_id: userID,
-                    estado: 'Activo' // Opcional, según cómo manejes tus estados
-                }]);
-                console.log("¡Nuevo Perfil Creado!");
+                    correo: email 
+                }).eq('id', personaVinculadaId);
+            } else {
+                let query = clienteSupa.from('personas').select('id, nombre').eq('sede_nombre', sedeNombre).is('auth_id', null).eq('correo', email);
+                const { data: clones } = await query;
+
+                if (clones && clones.length > 0) {
+                    await clienteSupa.from('personas').update({ auth_id: userID }).eq('id', clones[0].id);
+                } else {
+                    await clienteSupa.from('personas').insert([{
+                        nombre: nombre,
+                        correo: email,
+                        auth_id: userID,
+                        sede_nombre: sedeNombre,
+                        organizacion_id: orgIdVinculada || orgIdFromSelect,
+                        estado: 'Activo',
+                        etapa_crecimiento: 'Nuevo Hijo'
+                    }]);
+                }
             }
 
             estadoCarga(btn, false);
-            // ¡Registro completado! Redirigir a la app.
             window.location.href = "app_inicio.html"; 
         }
 
         // ==========================================
-        // FUNCIONES DE APOYO (Visuales)
+        // FUNCIONES DE APOYO
         // ==========================================
         function mostrarError(elemento, mensaje) {
             elemento.innerText = mensaje;
