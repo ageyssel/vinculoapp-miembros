@@ -196,12 +196,13 @@
         // ==========================================
         async function cargarSedes() {
             try {
-                const { data, error } = await clienteSupa.from('sedes').select('nombre, organizacion_id');
+                // Pedimos solo el nombre de la sede para evitar errores de columnas faltantes
+                const { data, error } = await clienteSupa.from('sedes').select('nombre');
                 const select = document.getElementById('reg-sede');
                 
                 if (data && data.length > 0) {
                     select.innerHTML = '<option value="" disabled selected>Selecciona tu iglesia...</option>' + 
-                        data.map(s => `<option value="${s.nombre}" data-org="${s.organizacion_id}">${s.nombre}</option>`).join('');
+                        data.map(s => `<option value="${s.nombre}">${s.nombre}</option>`).join('');
                 } else {
                     select.innerHTML = '<option value="" disabled selected>No se encontraron iglesias</option>';
                 }
@@ -209,7 +210,7 @@
         }
 
         // ==========================================
-        // BUSCADOR PREDICTIVO Y VINCULACIÓN
+        // BUSCADOR PREDICTIVO (CORREGIDO - ANTI ERROR 400)
         // ==========================================
         async function buscarNombrePredictivo(val) {
             const resultsDiv = document.getElementById('reg-resultados-nombre');
@@ -228,18 +229,24 @@
                 return;
             }
 
+            // FIX: Pedimos solo 'id' y 'nombre' para evitar el error 400 de columnas que no coinciden (como correo vs email)
             const { data, error } = await clienteSupa
                 .from('personas')
-                .select('id, nombre, correo, organizacion_id')
+                .select('id, nombre') 
                 .eq('sede_nombre', sedeNombre)
                 .is('auth_id', null)
                 .ilike('nombre', `%${val}%`)
                 .limit(5);
 
+            if (error) {
+                console.error("Error en la búsqueda:", error);
+                return;
+            }
+
             if (data && data.length > 0) {
                 resultsDiv.innerHTML = data.map(p => `
                     <button type="button" class="list-group-item list-group-item-action py-2 small border-primary border-opacity-25" 
-                        onclick="seleccionarPersonaParaRegistro('${p.id}', '${p.nombre.replace(/'/g, "\\'")}', '${p.correo || ''}', '${p.organizacion_id}')">
+                        onclick="seleccionarPersonaParaRegistro('${p.id}', '${p.nombre.replace(/'/g, "\\'")}')">
                         <i class="fa-solid fa-user-check text-success me-2"></i> <strong>${p.nombre}</strong>
                     </button>
                 `).join('');
@@ -249,12 +256,9 @@
             resultsDiv.style.display = 'block';
         }
 
-        function seleccionarPersonaParaRegistro(id, nombre, correo, orgId) {
+        function seleccionarPersonaParaRegistro(id, nombre) {
             document.getElementById('reg-nombre').value = nombre;
             document.getElementById('reg-persona-id').value = id;
-            document.getElementById('reg-organizacion-id').value = orgId;
-            
-            if(correo && correo !== 'null') document.getElementById('reg-email').value = correo;
             
             document.getElementById('reg-resultados-nombre').style.display = 'none';
             
@@ -265,7 +269,6 @@
 
         function resetearVinculo() {
             document.getElementById('reg-persona-id').value = '';
-            document.getElementById('reg-organizacion-id').value = '';
             document.getElementById('reg-hint-vinculo').classList.add('d-none');
             document.getElementById('reg-nombre').classList.replace('border-success', 'border-primary');
             document.getElementById('reg-sede').disabled = false;
@@ -324,14 +327,12 @@
         async function ejecutarRegistro() {
             const sedeSelect = document.getElementById('reg-sede');
             const sedeNombre = sedeSelect.value;
-            const orgIdFromSelect = sedeSelect.options[sedeSelect.selectedIndex]?.getAttribute('data-org');
             
             const nombre = document.getElementById('reg-nombre').value.trim();
             const email = document.getElementById('reg-email').value.trim().toLowerCase();
             const pass = document.getElementById('reg-pass').value;
             
             const personaVinculadaId = document.getElementById('reg-persona-id').value;
-            const orgIdVinculada = document.getElementById('reg-organizacion-id').value;
 
             const errorBox = document.getElementById('reg-error');
             const btn = document.getElementById('btn-reg');
@@ -342,6 +343,7 @@
 
             estadoCarga(btn, true);
 
+            // A: Crear la cuenta en Supabase Auth
             const { data: authData, error: authError } = await clienteSupa.auth.signUp({
                 email: email,
                 password: pass
@@ -355,28 +357,21 @@
 
             const userID = authData.user.id;
 
+            // B: Vincular o Crear Perfil
             if (personaVinculadaId) {
+                // Actualizamos SOLO el auth_id para evitar errores 400
                 await clienteSupa.from('personas').update({ 
-                    auth_id: userID,
-                    correo: email 
+                    auth_id: userID
                 }).eq('id', personaVinculadaId);
             } else {
-                let query = clienteSupa.from('personas').select('id, nombre').eq('sede_nombre', sedeNombre).is('auth_id', null).eq('correo', email);
-                const { data: clones } = await query;
-
-                if (clones && clones.length > 0) {
-                    await clienteSupa.from('personas').update({ auth_id: userID }).eq('id', clones[0].id);
-                } else {
-                    await clienteSupa.from('personas').insert([{
-                        nombre: nombre,
-                        correo: email,
-                        auth_id: userID,
-                        sede_nombre: sedeNombre,
-                        organizacion_id: orgIdVinculada || orgIdFromSelect,
-                        estado: 'Activo',
-                        etapa_crecimiento: 'Nuevo Hijo'
-                    }]);
-                }
+                // Es totalmente nuevo: Lo creamos (usamos los campos básicos seguros)
+                await clienteSupa.from('personas').insert([{
+                    nombre: nombre,
+                    auth_id: userID,
+                    sede_nombre: sedeNombre,
+                    estado: 'Activo',
+                    etapa_crecimiento: 'Nuevo Hijo'
+                }]);
             }
 
             estadoCarga(btn, false);
@@ -384,7 +379,7 @@
         }
 
         // ==========================================
-        // FUNCIONES DE APOYO
+        // FUNCIONES VISUALES
         // ==========================================
         function mostrarError(elemento, mensaje) {
             elemento.innerText = mensaje;
