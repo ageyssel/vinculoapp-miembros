@@ -157,53 +157,112 @@
             }
         });
 
-        // Cargar el historial del usuario
-        async function cargarHistorial() {
-            const cont = document.getElementById('historial-consejerias');
-            try {
-                const { data, error } = await clienteSupa
-                    .from('consejerias')
-                    .select('*')
-                    .eq('auth_id', sesionUsuario.id)
-                    .order('fecha_solicitud', { ascending: false });
+        // 1. Reemplaza la función cargarHistorial actual por esta:
+async function cargarHistorial() {
+    const cont = document.getElementById('historial-consejerias');
+    try {
+        const { data, error } = await clienteSupa
+            .from('consejerias')
+            .select('*')
+            .eq('auth_id', sesionUsuario.id)
+            .order('fecha_solicitud', { ascending: false });
 
-                if (error) throw error;
+        if (error) throw error;
 
-                if (!data || data.length === 0) {
-                    cont.innerHTML = `<div class="text-center py-4 text-muted small"><i class="fa-regular fa-folder-open mb-2 d-block fs-4 opacity-50"></i>No tienes solicitudes activas.</div>`;
-                    return;
-                }
-
-                cont.innerHTML = data.map(item => {
-                    const fecha = new Date(item.fecha_solicitud).toLocaleDateString('es-CL', { day:'2-digit', month:'short', year:'numeric' });
-                    
-                    // Colores según el estado
-                    let colorStatus = 'text-warning'; // Pendiente
-                    let bgStatus = 'bg-warning';
-                    let iconStatus = 'fa-clock';
-                    
-                    if(item.estado === 'En Proceso') { colorStatus = 'text-info'; bgStatus = 'bg-info'; iconStatus = 'fa-spinner'; }
-                    if(item.estado === 'Finalizada' || item.estado === 'Atendida') { colorStatus = 'text-success'; bgStatus = 'bg-success'; iconStatus = 'fa-check-double'; }
-                    
-                    return `
-                    <div class="history-item p-3 d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center">
-                            <div class="${bgStatus} bg-opacity-10 p-2 rounded-circle me-3 ${colorStatus}">
-                                <i class="fa-solid ${iconStatus}"></i>
-                            </div>
-                            <div>
-                                <h6 class="mb-0 fw-bold small text-dark">${item.tipo_consejeria}</h6>
-                                <small class="text-muted">${fecha}</small>
-                            </div>
-                        </div>
-                        <span class="badge ${bgStatus} bg-opacity-25 border border-light-subtle text-dark" style="font-size: 0.75rem;">${item.estado}</span>
-                    </div>`;
-                }).join('');
-
-            } catch (err) {
-                cont.innerHTML = `<div class="text-center py-4 text-danger small">No se pudo cargar el historial.</div>`;
-            }
+        if (!data || data.length === 0) {
+            cont.innerHTML = `<div class="text-center py-4 text-muted small"><i class="fa-regular fa-folder-open mb-2 d-block fs-4 opacity-50"></i>No tienes solicitudes activas.</div>`;
+            return;
         }
+
+        cont.innerHTML = data.map(item => {
+            const fecha = new Date(item.fecha_solicitud).toLocaleDateString('es-CL', { day:'2-digit', month:'short', year:'numeric' });
+            
+            let bgStatus = item.estado === 'En Proceso' ? 'bg-info' : (item.estado === 'Finalizada' ? 'bg-success' : 'bg-warning');
+            let iconStatus = item.estado === 'En Proceso' ? 'fa-spinner fa-spin' : (item.estado === 'Finalizada' ? 'fa-check-double' : 'fa-clock');
+
+            // --- RENDERIZADO DEL CHAT VISUAL ---
+            let chatHtml = '';
+            if (item.respuesta_pastoral) {
+                let mensajes = item.respuesta_pastoral.split('|||');
+                chatHtml = mensajes.map(msg => {
+                    if(!msg.trim()) return '';
+                    // Si el mensaje dice "Pastoral" o "Equipo", va a la izquierda (blanco). 
+                    // Si dice "Discípulo", va a la derecha (azul info).
+                    let esIglesia = msg.includes('Pastoral:') || msg.includes('Equipo:');
+                    let bubbleClass = esIglesia ? 'bg-light border align-self-start' : 'bg-info text-white align-self-end shadow-sm';
+                    return `<div class="p-2 rounded-3 mb-2 small d-flex flex-column ${bubbleClass}" style="max-width: 85%; line-height: 1.2;">
+                                ${msg.trim().replace(/\n/g, '<br>')}
+                            </div>`;
+                }).join('');
+            }
+
+            // --- SECCIÓN DE RESPUESTA ---
+            let areaRespuesta = (item.estado !== 'Finalizada') ? `
+                <div class="input-group mt-3 shadow-sm">
+                    <input type="text" id="reply-${item.id}" class="form-control form-control-sm" placeholder="Escribe un mensaje...">
+                    <button class="btn btn-info text-white btn-sm" onclick="responderChat('${item.id}')">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>` : '<div class="alert alert-light small py-1 mt-2 text-center">Solicitud Finalizada</div>';
+
+            return `
+            <div class="history-item p-3 border-bottom">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="d-flex align-items-center">
+                        <div class="${bgStatus} bg-opacity-10 p-2 rounded-circle me-2">
+                            <i class="fa-solid ${iconStatus} small"></i>
+                        </div>
+                        <h6 class="mb-0 fw-bold small">${item.tipo_consejeria}</h6>
+                    </div>
+                    <span class="badge ${bgStatus} bg-opacity-25 text-dark" style="font-size: 0.65rem;">${item.estado}</span>
+                </div>
+                
+                <div class="p-2 bg-light rounded-3 mb-2" style="font-size: 0.8rem; border-left: 3px solid #cbd5e1;">
+                    <strong>Tu solicitud:</strong> ${item.motivo}
+                </div>
+
+                <div class="d-flex flex-column mt-3 border-top pt-3" id="chat-container-${item.id}">
+                    ${chatHtml || '<div class="text-center text-muted small italic">Esperando respuesta del equipo...</div>'}
+                </div>
+
+                ${areaRespuesta}
+            </div>`;
+        }).join('');
+
+    } catch (err) {
+        cont.innerHTML = `<div class="text-center py-4 text-danger small">Error al cargar historial.</div>`;
+    }
+}
+
+// 2. AÑADE esta nueva función para enviar mensajes desde la App:
+async function responderChat(idConsejeria) {
+    const input = document.getElementById(`reply-${idConsejeria}`);
+    const texto = input.value.trim();
+    if (!texto) return;
+
+    try {
+        // Obtenemos lo que ya existe en el chat
+        const { data: current } = await clienteSupa.from('consejerias').select('respuesta_pastoral').eq('id', idConsejeria).single();
+        
+        let fechaHora = new Date().toLocaleString('es-CL', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+        let nuevoMensaje = `[${fechaHora}] Discípulo:\n${texto}`;
+        
+        let updateText = current.respuesta_pastoral ? current.respuesta_pastoral + '|||' + nuevoMensaje : nuevoMensaje;
+
+        const { error } = await clienteSupa.from('consejerias').update({ 
+            respuesta_pastoral: updateText,
+            estado: 'En Proceso' // Forzamos el estado a En Proceso cuando el miembro responde
+        }).eq('id', idConsejeria);
+
+        if (error) throw error;
+        
+        input.value = '';
+        cargarHistorial(); // Refrescar vista
+        
+    } catch (err) {
+        Swal.fire('Error', 'No se pudo enviar el mensaje.', 'error');
+    }
+}
     </script>
 </body>
 </html>
