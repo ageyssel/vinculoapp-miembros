@@ -79,22 +79,24 @@
     let cursoActivoId = null;
 
     window.onload = async () => {
-        // 1. Esperamos un momento a que el navegador cargue la sesión local
+        // 1. Obtener la sesión activa
         const { data: { session } } = await clienteSupa.auth.getSession();
-    
-        if (!session) {
+        
+        if (!session || !session.user) {
             window.location.href = 'miembros.html';
             return;
         }
 
-        // 2. Si hay sesión, buscamos el perfil del alumno
-        const userEmail = session.user.email.toLowerCase().trim();
+        // ¡AQUÍ DEFINIMOS AL USUARIO PARA QUE NO DE ERROR!
+        const user = session.user;
+        const userEmail = user.email.toLowerCase().trim();
         console.log("Buscando ficha para el correo:", userEmail);
 
+        // 2. Buscar al alumno en la tabla personas
         const { data: perfil, error } = await clienteSupa
             .from('personas')
             .select('*')
-            .eq('email', user.email)
+            .eq('email', userEmail)
             .maybeSingle();
 
         if (error) {
@@ -102,21 +104,21 @@
             Swal.fire('Error Técnico', 'Hubo un problema al conectar con la base de datos.', 'error');
             return;
         }
-    
+
         if (!perfil) {
-            // El usuario existe en Auth, pero no en la tabla personas
             Swal.fire({
                 title: 'Ficha no encontrada',
-                html: `Tu cuenta <b>${userEmail}</b> no tiene una ficha de miembro vinculada.<br><br>Por favor, contacta al administrador para que registre tu correo en el sistema.`,
+                html: `Tu cuenta <b>${userEmail}</b> no tiene una ficha de miembro vinculada.<br><br>Contacta al administrador para que registre tu correo en el sistema.`,
                 icon: 'warning',
                 confirmButtonText: 'Volver',
                 confirmButtonColor: '#1D4ED8'
             }).then(() => {
-                window.location.href = 'app_inicio.html';
+                window.location.href = 'miembros.html'; // Lo enviamos de vuelta al inicio
             });
             return;
         }
-    
+        
+        // 3. Todo correcto: Cargamos el perfil y los cursos
         miPerfil = perfil;
         document.getElementById('header-nombre').innerText = perfil.nombre;
         cargarMisCursos();
