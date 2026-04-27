@@ -29,8 +29,8 @@
     
     <script>
         // IMPORTANTE: ¡No borres las comillas simples (' ')!
-        const supaURL = 'https://TU-URL-DE-SUPABASE.supabase.co';
-        const supaKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6Ik... (TU CLAVE LARGA)';
+        const supaURL = 'https://molqmoxdnddsrljuoljv.supabase.co';
+        const supaKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1vbHFtb3hkbmRkc3JsanVvbGp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0OTcyMzEsImV4cCI6MjA5MDA3MzIzMX0.eIoda0OMBKbEFt6GjBD5oWIWtdvogvTyOGYwgBsG54s';
         const clienteSupa = window.supabase.createClient(supaURL, supaKEY);
     </script>
 
@@ -79,16 +79,30 @@
     let cursoActivoId = null;
 
     window.onload = async () => {
-        // 1. Validar Sesión y Obtener ID del Alumno
-        const { data: authData } = await clienteSupa.auth.getUser();
-        if (!authData.user) return window.location.href = 'index.html';
+        // 1. Esperamos un momento a que el navegador cargue la sesión local
+        const { data: { session } } = await clienteSupa.auth.getSession();
+    
+        if (!session) {
+            console.log("No se encontró sesión activa");
+            window.location.href = 'miembros.html'; // Te envía al login correcto
+            return;
+        }
 
-        const { data: perfil } = await clienteSupa.from('personas').select('*').eq('email', authData.user.email).maybeSingle();
-        if (!perfil) return Swal.fire('Error', 'No tienes un perfil vinculado. Contacta a soporte.', 'error');
-        
+        // 2. Si hay sesión, buscamos el perfil del alumno
+        const user = session.user;
+        const { data: perfil, error } = await clienteSupa
+            .from('personas')
+            .select('*')
+            .eq('email', user.email)
+            .maybeSingle();
+
+        if (error || !perfil) {
+            Swal.fire('Error', 'No pudimos encontrar tu ficha de miembro.', 'error');
+            return;
+        }
+    
         miPerfil = perfil;
         document.getElementById('header-nombre').innerText = perfil.nombre;
-
         cargarMisCursos();
     };
 
