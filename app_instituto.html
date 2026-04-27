@@ -87,16 +87,14 @@
             return;
         }
 
-        // ¡AQUÍ DEFINIMOS AL USUARIO PARA QUE NO DE ERROR!
         const user = session.user;
-        const userEmail = user.email.toLowerCase().trim();
-        console.log("Buscando ficha para el correo:", userEmail);
+        const userId = user.id; // <-- AQUÍ ESTÁ EL SECRETO: Usamos el ID infalible de Auth
 
-        // 2. Buscar al alumno en la tabla personas
+        // 2. Buscar al alumno en la tabla personas usando su auth_id
         const { data: perfil, error } = await clienteSupa
             .from('personas')
             .select('*')
-            .eq('email', userEmail)
+            .eq('auth_id', userId) // <-- LA CORRECCIÓN CLAVE
             .maybeSingle();
 
         if (error) {
@@ -108,19 +106,23 @@
         if (!perfil) {
             Swal.fire({
                 title: 'Ficha no encontrada',
-                html: `Tu cuenta <b>${userEmail}</b> no tiene una ficha de miembro vinculada.<br><br>Contacta al administrador para que registre tu correo en el sistema.`,
+                html: `Tu cuenta no tiene una ficha de miembro vinculada.<br><br>Contacta al administrador para que revise tu registro.`,
                 icon: 'warning',
                 confirmButtonText: 'Volver',
                 confirmButtonColor: '#1D4ED8'
             }).then(() => {
-                window.location.href = 'miembros.html'; // Lo enviamos de vuelta al inicio
+                window.location.href = 'app_inicio.html';
             });
             return;
         }
         
         // 3. Todo correcto: Cargamos el perfil y los cursos
         miPerfil = perfil;
-        document.getElementById('header-nombre').innerText = perfil.nombre;
+        
+        // Soportamos si en tu base de datos la columna se llama 'nombres' o 'nombre'
+        let nombreMostrar = perfil.nombres || perfil.nombre || session.user.email.split('@')[0];
+        document.getElementById('header-nombre').innerText = nombreMostrar;
+        
         cargarMisCursos();
     };
 
