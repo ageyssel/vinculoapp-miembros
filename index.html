@@ -322,7 +322,7 @@
         }
 
         // ==========================================
-        // EJECUTAR REGISTRO
+        // EJECUTAR REGISTRO (VERSIÓN MEJORADA)
         // ==========================================
         async function ejecutarRegistro() {
             const sedeSelect = document.getElementById('reg-sede');
@@ -343,10 +343,15 @@
 
             estadoCarga(btn, true);
 
-            // A: Crear la cuenta en Supabase Auth
+            // A: Crear la cuenta en Supabase Auth y guardar el nombre en los metadatos
             const { data: authData, error: authError } = await clienteSupa.auth.signUp({
                 email: email,
-                password: pass
+                password: pass,
+                options: {
+                    data: {
+                        nombre: nombre // <-- AQUÍ ENVIAMOS EL NOMBRE A SUPABASE AUTH
+                    }
+                }
             });
 
             if (authError) {
@@ -357,16 +362,18 @@
 
             const userID = authData.user.id;
 
-            // B: Vincular o Crear Perfil
+            // B: Lógica Inteligente: Vincular o Crear Perfil
             if (personaVinculadaId) {
-                // Actualizamos SOLO el auth_id para evitar errores 400
+                // Si encontró su nombre, actualizamos su ficha existente con el nuevo auth_id y su correo
                 await clienteSupa.from('personas').update({ 
-                    auth_id: userID
+                    auth_id: userID,
+                    email: email 
                 }).eq('id', personaVinculadaId);
             } else {
-                // Es totalmente nuevo: Lo creamos (usamos los campos básicos seguros)
+                // Si es alguien 100% nuevo, creamos su ficha desde cero
                 await clienteSupa.from('personas').insert([{
                     nombre: nombre,
+                    email: email,
                     auth_id: userID,
                     sede_nombre: sedeNombre,
                     estado: 'Activo',
@@ -375,6 +382,7 @@
             }
 
             estadoCarga(btn, false);
+            // Registro exitoso, lo enviamos al panel de inicio
             window.location.href = "app_inicio.html"; 
         }
 
