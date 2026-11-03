@@ -218,7 +218,7 @@
             
             const { data: persona } = await clienteSupa
                 .from('personas')
-                .select('*, sedes(nombre)') 
+                .select('id,nombre,grupo_id,sede_nombre,telefono,email,etapa_crecimiento,cumpleanos,areas_servicio,fecha_registro,id_excel,progreso_espiritual,organizacion_id,direccion,foto_url,tutores,familia_ids,fecha_nacimiento,etiquetas,auth_id,nombres,sede_id,sedes(nombre)')
                 .eq('auth_id', userId)
                 .maybeSingle();
 

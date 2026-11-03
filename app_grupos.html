@@ -95,7 +95,7 @@
                 // Consultamos la tabla personas
                 const { data: persona, error: errPersona } = await clienteSupa
                     .from('personas')
-                    .select('*')
+                    .select('id,nombre,grupo_id,sede_nombre,telefono,email,etapa_crecimiento,cumpleanos,areas_servicio,fecha_registro,id_excel,progreso_espiritual,organizacion_id,direccion,foto_url,tutores,familia_ids,fecha_nacimiento,etiquetas,auth_id,nombres,sede_id')
                     .eq('auth_id', authId)
                     .maybeSingle();
 
