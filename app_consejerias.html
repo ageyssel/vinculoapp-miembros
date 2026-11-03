@@ -106,6 +106,8 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1vbHFtb3hkbmRkc3JsanVvbGp2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDQ5NzIzMSwiZXhwIjoyMDkwMDczMjMxfQ.1Is7Jz6dM7BXSXSeZppXf0_uq4bbKiNsCwlKzuL5YNw';
         const clienteSupa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
+        const escapeCounselHtml = (value) => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+
         let sesionUsuario = null;
 
         document.addEventListener('DOMContentLoaded', async () => {
@@ -191,7 +193,7 @@ async function cargarHistorial() {
                     let esIglesia = msg.includes('Pastoral:') || msg.includes('Equipo:');
                     let bubbleClass = esIglesia ? 'bg-light border align-self-start' : 'bg-info text-white align-self-end shadow-sm';
                     return `<div class="p-2 rounded-3 mb-2 small d-flex flex-column ${bubbleClass}" style="max-width: 85%; line-height: 1.2;">
-                                ${msg.trim().replace(/\n/g, '<br>')}
+                                ${escapeCounselHtml(msg.trim()).replace(/\n/g, '<br>')}
                             </div>`;
                 }).join('');
             }
@@ -212,13 +214,13 @@ async function cargarHistorial() {
                         <div class="${bgStatus} bg-opacity-10 p-2 rounded-circle me-2">
                             <i class="fa-solid ${iconStatus} small"></i>
                         </div>
-                        <h6 class="mb-0 fw-bold small">${item.tipo_consejeria}</h6>
+                        <h6 class="mb-0 fw-bold small">${escapeCounselHtml(item.tipo_consejeria)}</h6>
                     </div>
-                    <span class="badge ${bgStatus} bg-opacity-25 text-dark" style="font-size: 0.65rem;">${item.estado}</span>
+                    <span class="badge ${bgStatus} bg-opacity-25 text-dark" style="font-size: 0.65rem;">${escapeCounselHtml(item.estado)}</span>
                 </div>
                 
                 <div class="p-2 bg-light rounded-3 mb-2" style="font-size: 0.8rem; border-left: 3px solid #cbd5e1;">
-                    <strong>Tu solicitud:</strong> ${item.motivo}
+                    <strong>Tu solicitud:</strong> ${escapeCounselHtml(item.motivo)}
                 </div>
 
                 <div class="d-flex flex-column mt-3 border-top pt-3" id="chat-container-${item.id}">
